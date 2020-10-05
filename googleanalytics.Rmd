@@ -1,0 +1,63 @@
+---
+title: "Google Analytics in R"
+output: html_notebook
+---
+
+```{r}
+library(googleAnalyticsR)
+my_accounts <- ga_account_list()
+```
+
+```{r}
+# Anvilinsights.com Reporting View Id
+my_id <- 1903455 
+```
+
+```{r}
+#Get data into R
+web_data <- google_analytics(my_id, 
+                                date_range = c("2018-09-01", "2020-08-31"),
+                                metrics = c("sessions","pageviews"),
+                                dimensions = c("date","deviceCategory"),
+                                anti_sample = TRUE)
+```
+
+```{r}
+library(tidyverse) # try to keep all of your libraries in one place!
+library(dplyr)
+```
+
+```{r}
+web_daily <- 
+  subset(web_data, select = -c(deviceCategory, sessions)) %>%
+	group_by(date) %>%
+	summarise(pageviews = sum(pageviews))
+
+```
+
+```{r}
+library(forecast)
+```
+
+
+```{r}
+#web_daily_yearts <- ts(as.vector(web_daily$pageviews), frequency = 365, start=c(2018,245))
+web_daily_ts <- ts(as.vector(web_daily$pageviews), frequency = 30, start=c(1))
+#web_daily_ts <- ts(as.vector(web_daily$pageviews), frequency = 7, start=c(1))
+web_daily_hw <- HoltWinters(web_daily_ts, gamma = FALSE)
+web_daily_dec <- decompose(web_daily_ts, type = "add")
+```
+
+```{r}
+plot(web_daily_ts)
+plot(web_daily_hw)
+plot(web_daily_dec)
+```
+
+
+```{r}
+ts_max <- max(web_daily_ts)
+web_daily_hw_for <- forecast(web_daily_hw, h = 180)
+plot(web_daily_hw_for, main="6 Month Forecast of Pageviews", xlab = "Months", ylim = c(0,ts_max) )
+```
+
